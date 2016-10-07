@@ -254,3 +254,6 @@ paket-files/
 
 # CodeRush
 .cr/
+
+# Manual
+Mystter_Notification/SecretKeys.cs
