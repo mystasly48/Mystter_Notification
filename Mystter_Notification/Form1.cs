@@ -2,6 +2,10 @@
 using System.Threading;
 using System.Windows.Forms;
 using CoreTweet;
+using CoreTweet.Streaming;
+using System.Reactive.Linq;
+using System.Diagnostics;
+using System.Media;
 
 namespace Mystter_Notification {
     public partial class Form1 : Form {
@@ -11,36 +15,103 @@ namespace Mystter_Notification {
 
         bool HideForm = true;
         Tokens twitter;
+        string BalloonClickedUrl = "";
+        const string SCREEN_NAME = "30msl";
+        const string TWITTER_URL = "https://twitter.com/";
 
         private void Form1_Load(object sender, EventArgs e) {
+            TwitterInit();
+
             var streamThread = new Thread(new ThreadStart(Streaming));
             streamThread.Start();
 
-            if (HideForm) Opacity = 0;
+            if (HideForm)
+                Opacity = 0;
+        }
+
+        private void TwitterInit() {
+            twitter = Tokens.Create(SecretKeys.ConsumerKey, SecretKeys.ConsumerSecret, SecretKeys.AccessToken, SecretKeys.AccessTokenSecret);
         }
 
         private void Form1_Shown(object sender, EventArgs e) {
-            if (HideForm) Hide();
+            if (HideForm)
+                Hide();
         }
 
         private void Streaming() {
-            var stream = twitter.
+            var userStream = twitter.Streaming.UserAsObservable().Publish();
+            userStream.OfType<EventMessage>().Where(m => m.Source.ScreenName != SCREEN_NAME).Subscribe(m => ReceivedEventMessage(m));
+            userStream.Connect();
         }
 
-        private void ShowBalloonTip(string text, string title, ToolTipIcon icon, int timeout) {
+        private void ReceivedEventMessage(EventMessage m) {
+            var user = $"{m.Source.Name} (@{m.Source.ScreenName})";
+            var userAndEvent = GetEventName(m.Event) + " : " + user;
+            var targetStatusText = (m.TargetStatus != null) ? m.TargetStatus.Text : null;
+            var targetListName = (m.TargetList != null) ? m.TargetList.Name : null;
+            Debug.WriteLine(userAndEvent);
+            if (m.Event == EventCode.Follow) {
+                ShowBalloonTipAsync(userAndEvent);
+                BalloonClickedUrl = TWITTER_URL + m.Source.ScreenName;
+            } else if (m.Event == EventCode.Favorite || m.Event == EventCode.Unfavorite || m.Event == EventCode.QuotedTweet) {
+                ShowBalloonTipAsync(targetStatusText, userAndEvent);
+                BalloonClickedUrl = TWITTER_URL + m.TargetStatus.User.ScreenName + "/status/" + m.TargetStatus.Id;
+            } else if (m.Event == EventCode.ListMemberAdded || m.Event == EventCode.ListMemberRemoved || m.Event == EventCode.ListUserSubscribed || m.Event == EventCode.ListUserUnsubscribed) {
+                ShowBalloonTipAsync(targetListName, userAndEvent);
+                BalloonClickedUrl = TWITTER_URL + m.Source.ScreenName + "/lists/" + m.TargetList.Slug;
+            } else {
+                ShowBalloonTipAsync(m.Event.ToString());
+            }
+        }
+
+        private delegate void ShowBalloonTipCallBack(string text = "", string title = "", int timeout = 3000, ToolTipIcon icon = ToolTipIcon.None);
+        private void ShowBalloonTipAsync(string title, string text = "", int timeout = 3000, ToolTipIcon icon = ToolTipIcon.None) {
+            if (InvokeRequired) {
+                var method = new ShowBalloonTipCallBack(ShowBalloonTipAsync);
+                Invoke(method, new object[] { text, title, timeout, icon });
+            } else {
+                ShowBalloonTip(text, title, timeout, icon);
+            }
+        }
+
+        private void ShowBalloonTip(string text = "", string title = "", int timeout = 3000, ToolTipIcon icon = ToolTipIcon.None, string url = "") {
             notifyIcon1.BalloonTipText = text;
             notifyIcon1.BalloonTipTitle = title;
             notifyIcon1.BalloonTipIcon = icon;
             notifyIcon1.ShowBalloonTip(timeout);
-        }
-
-        private void button1_Click(object sender, EventArgs e) {
-            ShowBalloonTip("Text", "Title", ToolTipIcon.Warning, 1000);
-
+            BalloonClickedUrl = url;
         }
 
         private void 終了ToolStripMenuItem_Click(object sender, EventArgs e) {
             Application.Exit();
+        }
+
+        private void notifyIcon1_BalloonTipClicked(object sender, EventArgs e) {
+            if (!string.IsNullOrEmpty(BalloonClickedUrl))
+                Process.Start(BalloonClickedUrl);
+        }
+
+        private string GetEventName(EventCode code) {
+            switch (code) {
+                case EventCode.Follow:
+                    return "Followed";
+                case EventCode.Favorite:
+                    return "Liked";
+                case EventCode.Unfavorite:
+                    return "Unliked";
+                case EventCode.QuotedTweet:
+                    return "Quoted";
+                case EventCode.ListMemberAdded:
+                    return "Listed";
+                case EventCode.ListMemberRemoved:
+                    return "Unlisted";
+                case EventCode.ListUserSubscribed:
+                    return "Subscribed";
+                case EventCode.ListUserUnsubscribed:
+                    return "Unsubscribed";
+                default:
+                    return null;
+            }
         }
     }
 }
