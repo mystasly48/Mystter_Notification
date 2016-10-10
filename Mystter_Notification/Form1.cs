@@ -39,9 +39,18 @@ namespace Mystter_Notification {
         }
 
         private void Streaming() {
-            var userStream = twitter.Streaming.UserAsObservable().Publish();
-            userStream.OfType<EventMessage>().Where(m => m.Source.ScreenName != SCREEN_NAME).Subscribe(m => ReceivedEventMessage(m));
-            userStream.Connect();
+            var eventStream = twitter.Streaming.UserAsObservable().Publish();
+            eventStream.OfType<EventMessage>().Where(m => m.Source.ScreenName != SCREEN_NAME).Subscribe(m => ReceivedEventMessage(m));
+            eventStream.Connect();
+
+            var replyStream = twitter.Streaming.FilterAsObservable(track: "@" + SCREEN_NAME).Publish();
+            replyStream.OfType<StatusMessage>().Subscribe(m => ReceivedReplyMessage(m));
+            replyStream.Connect();
+        }
+
+        private void ReceivedReplyMessage(StatusMessage m) {
+            ShowBalloonTipAsync(m.Status.Text, $"Reply : {m.Status.User.Name} @({m.Status.User.ScreenName})");
+            BalloonClickedUrl = TWITTER_URL + m.Status.User.ScreenName + "/status/" + m.Status.Id;
         }
 
         private void ReceivedEventMessage(EventMessage m) {
@@ -49,7 +58,6 @@ namespace Mystter_Notification {
             var userAndEvent = GetEventName(m.Event) + " : " + user;
             var targetStatusText = (m.TargetStatus != null) ? m.TargetStatus.Text : null;
             var targetListName = (m.TargetList != null) ? m.TargetList.Name : null;
-            Debug.WriteLine(userAndEvent);
             if (m.Event == EventCode.Follow) {
                 ShowBalloonTipAsync(userAndEvent);
                 BalloonClickedUrl = TWITTER_URL + m.Source.ScreenName;
