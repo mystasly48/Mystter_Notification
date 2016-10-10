@@ -1,13 +1,13 @@
 ﻿using System;
+using System.Diagnostics;
+using System.IO;
+using System.Media;
+using System.Reactive.Linq;
 using System.Threading;
 using System.Windows.Forms;
 using CoreTweet;
 using CoreTweet.Streaming;
-using System.Reactive.Linq;
-using System.Diagnostics;
-using System.Media;
 using Mystter_Notification.Properties;
-using System.IO;
 
 namespace Mystter_Notification {
     public partial class Form1 : Form {
