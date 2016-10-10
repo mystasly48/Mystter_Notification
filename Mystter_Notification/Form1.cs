@@ -6,6 +6,8 @@ using CoreTweet.Streaming;
 using System.Reactive.Linq;
 using System.Diagnostics;
 using System.Media;
+using Mystter_Notification.Properties;
+using System.IO;
 
 namespace Mystter_Notification {
     public partial class Form1 : Form {
@@ -88,6 +90,7 @@ namespace Mystter_Notification {
             notifyIcon1.BalloonTipIcon = icon;
             notifyIcon1.ShowBalloonTip(timeout);
             BalloonClickedUrl = url;
+            PlaySound(Resources.se);
         }
 
         private void 終了ToolStripMenuItem_Click(object sender, EventArgs e) {
@@ -120,6 +123,11 @@ namespace Mystter_Notification {
                 default:
                     return null;
             }
+        }
+
+        private void PlaySound(Stream sound) {
+            var player = new SoundPlayer(sound);
+            player.Play();
         }
     }
 }
