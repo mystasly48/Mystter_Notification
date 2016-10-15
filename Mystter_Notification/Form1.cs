@@ -63,7 +63,7 @@ namespace Mystter_Notification {
             if (m.Event == EventCode.Follow) {
                 ShowBalloonTipAsync(userAndEvent);
                 BalloonClickedUrl = TWITTER_URL + m.Source.ScreenName;
-            } else if (m.Event == EventCode.Favorite || m.Event == EventCode.Unfavorite || m.Event == EventCode.QuotedTweet) {
+            } else if (m.Event == EventCode.Favorite || m.Event == EventCode.Unfavorite || m.Event == EventCode.QuotedTweet || m.Event == EventCode.FavoritedRetweet || m.Event == EventCode.RetweetedRetweet) {
                 ShowBalloonTipAsync(targetStatusText, userAndEvent);
                 BalloonClickedUrl = TWITTER_URL + m.TargetStatus.User.ScreenName + "/status/" + m.TargetStatus.Id;
             } else if (m.Event == EventCode.ListMemberAdded || m.Event == EventCode.ListMemberRemoved || m.Event == EventCode.ListUserSubscribed || m.Event == EventCode.ListUserUnsubscribed) {
@@ -120,6 +120,10 @@ namespace Mystter_Notification {
                     return "Subscribed";
                 case EventCode.ListUserUnsubscribed:
                     return "Unsubscribed";
+                case EventCode.FavoritedRetweet:
+                    return "Retweet Favorited";
+                case EventCode.RetweetedRetweet:
+                    return "Retweet Retweeted";
                 default:
                     return null;
             }
